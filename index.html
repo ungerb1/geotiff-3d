@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GeoTIFF 3D Visualizer</title>
+    <style>
+      :root {
+        --bg: #0a0f1c;
+        --panel: rgba(13, 20, 36, 0.82);
+        --border: rgba(120, 180, 255, 0.14);
+        --text: #dbe6f5;
+        --text-dim: #7d8ca3;
+        --accent: #35b8a4;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--text);
+        font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      #scene { position: fixed; inset: 0; display: block; }
+
+      .panel {
+        position: fixed;
+        top: 16px;
+        left: 16px;
+        width: 240px;
+        padding: 14px 16px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        backdrop-filter: blur(10px);
+        user-select: none;
+      }
+      .panel h1 {
+        margin: 0 0 12px;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+      .row { margin-bottom: 12px; }
+      .row label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 11px;
+        color: var(--text-dim);
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      select, button {
+        width: 100%;
+        padding: 7px 9px;
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        font: inherit;
+        cursor: pointer;
+      }
+      select:hover, button:hover { background: rgba(255, 255, 255, 0.1); }
+      input[type="range"] { width: 100%; accent-color: var(--accent); }
+      .slider-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 2px;
+      }
+      input[type="number"] {
+        width: 68px;
+        padding: 4px 6px;
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--accent);
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        font: inherit;
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+      }
+      input[type="number"]:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+      .hint { margin: 10px 0 0; font-size: 11px; color: var(--text-dim); }
+
+      #info {
+        position: fixed;
+        left: 50%;
+        bottom: 14px;
+        transform: translateX(-50%);
+        padding: 6px 14px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        backdrop-filter: blur(10px);
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+      #info b { color: var(--accent); font-weight: 600; }
+
+      #dropzone {
+        position: fixed;
+        inset: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px dashed var(--accent);
+        border-radius: 18px;
+        background: rgba(53, 184, 164, 0.08);
+        font-size: 20px;
+        color: var(--accent);
+        pointer-events: none;
+      }
+      #loading {
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        padding: 8px 14px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        backdrop-filter: blur(10px);
+        color: var(--accent);
+      }
+      #error {
+        position: fixed;
+        top: 16px;
+        right: 16px;
+        max-width: 340px;
+        padding: 10px 14px;
+        background: rgba(80, 20, 24, 0.92);
+        border: 1px solid rgba(255, 120, 120, 0.35);
+        border-radius: 8px;
+        color: #ffd9d9;
+        white-space: pre-wrap;
+      }
+      #welcome {
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        color: var(--text-dim);
+        pointer-events: none;
+      }
+      #welcome .big { font-size: 26px; color: var(--text); margin-bottom: 8px; }
+      .hidden { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <canvas id="scene"></canvas>
+
+    <div class="panel">
+      <h1>GeoTIFF · 3D</h1>
+      <div class="row">
+        <button id="open-btn">Open .tif file…</button>
+      </div>
+      <div class="row">
+        <label for="resolution">Resolution</label>
+        <select id="resolution">
+          <option value="256">256 · fast</option>
+          <option value="512">512 · low</option>
+          <option value="1024" selected>1024 · medium</option>
+          <option value="2048">2048 · high</option>
+          <option value="0">Native · heavy</option>
+        </select>
+      </div>
+      <div class="row">
+        <label for="colormap">Colormap</label>
+        <select id="colormap"></select>
+      </div>
+      <div class="row">
+        <div class="slider-head">
+          <span>Vertical exaggeration</span>
+          <input type="number" id="exag-input" min="0.01" step="0.1" value="10" />
+        </div>
+        <input type="range" id="exaggeration" min="0.1" max="30" step="0.1" value="10" />
+      </div>
+      <p class="hint">Drop a GeoTIFF anywhere.<br />Drag to orbit · scroll to zoom · right-drag to pan.</p>
+    </div>
+
+    <div id="info" class="hidden"></div>
+    <div id="welcome">
+      <div class="big">GeoTIFF 3D Visualizer</div>
+      <div>Drag &amp; drop a .tif / .tiff to render its elevation surface</div>
+    </div>
+    <div id="dropzone" class="hidden">Drop GeoTIFF to load</div>
+    <div id="loading" class="hidden">Loading raster…</div>
+    <div id="error" class="hidden"></div>
+    <input type="file" id="file-input" accept=".tif,.tiff" hidden />
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
