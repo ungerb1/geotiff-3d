@@ -20,24 +20,31 @@ function toFinite(v) {
 export function downsampleBox(src, w, h, gw, gh) {
   const out = new Float32Array(gw * gh);
   for (let gy = 0; gy < gh; gy++) {
-    const y0 = Math.floor((gy * h) / gh);
-    const y1 = Math.max(y0 + 1, Math.floor(((gy + 1) * h) / gh));
+    const sy0 = (gy * h) / gh;
+    const sy1 = ((gy + 1) * h) / gh;
+    const iy0 = Math.floor(sy0);
+    const iy1 = Math.min(h - 1, Math.ceil(sy1) - 1);
     for (let gx = 0; gx < gw; gx++) {
-      const x0 = Math.floor((gx * w) / gw);
-      const x1 = Math.max(x0 + 1, Math.floor(((gx + 1) * w) / gw));
+      const sx0 = (gx * w) / gw;
+      const sx1 = ((gx + 1) * w) / gw;
+      const ix0 = Math.floor(sx0);
+      const ix1 = Math.min(w - 1, Math.ceil(sx1) - 1);
       let sum = 0;
-      let count = 0;
-      for (let y = y0; y < y1; y++) {
-        let i = y * w + x0;
-        for (let x = x0; x < x1; x++, i++) {
-          const v = src[i];
-          if (Number.isFinite(v)) {
-            sum += v;
-            count++;
-          }
+      let wsum = 0;
+      for (let y = iy0; y <= iy1; y++) {
+        const wy = Math.min(y + 1, sy1) - Math.max(y, sy0);
+        if (wy <= 0) continue;
+        const row = y * w;
+        for (let x = ix0; x <= ix1; x++) {
+          const v = src[row + x];
+          if (!Number.isFinite(v)) continue;
+          const wx = Math.min(x + 1, sx1) - Math.max(x, sx0);
+          if (wx <= 0) continue;
+          sum += v * wx * wy;
+          wsum += wx * wy;
         }
       }
-      out[gy * gw + gx] = count > 0 ? sum / count : NaN;
+      out[gy * gw + gx] = wsum > 0 ? sum / wsum : NaN;
     }
   }
   return out;

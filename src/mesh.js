@@ -67,7 +67,38 @@ export function buildTerrainGeometry(hf) {
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
   geometry.setIndex(new THREE.BufferAttribute(indices, 1));
-  geometry.computeVertexNormals();
+
+  const cellW = worldW / (width - 1);
+  const cellH = worldH / (height - 1);
+  const normals = new Float32Array(count * 3);
+  const elevAt = (r, c) => {
+    if (r < 0 || r >= height || c < 0 || c >= width) return null;
+    const v = data[r * width + c];
+    return Number.isFinite(v) ? v : null;
+  };
+  for (let r = 0; r < height; r++) {
+    for (let c = 0; c < width; c++) {
+      const i = r * width + c;
+      const hc = Number.isFinite(data[i]) ? data[i] : stats.min;
+      const l = elevAt(r, c - 1);
+      const rt = elevAt(r, c + 1);
+      const up = elevAt(r - 1, c);
+      const dn = elevAt(r + 1, c);
+      let dhdx = 0;
+      if (l !== null && rt !== null) dhdx = (rt - l) / (2 * cellW);
+      else if (rt !== null) dhdx = (rt - hc) / cellW;
+      else if (l !== null) dhdx = (hc - l) / cellW;
+      let dhdz = 0;
+      if (up !== null && dn !== null) dhdz = (dn - up) / (2 * cellH);
+      else if (dn !== null) dhdz = (dn - hc) / cellH;
+      else if (up !== null) dhdz = (hc - up) / cellH;
+      const invLen = 1 / Math.hypot(dhdx, 1, dhdz);
+      normals[i * 3] = -dhdx * invLen;
+      normals[i * 3 + 1] = invLen;
+      normals[i * 3 + 2] = -dhdz * invLen;
+    }
+  }
+  geometry.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
   return geometry;
 }
 
