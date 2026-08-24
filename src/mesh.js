@@ -20,7 +20,7 @@ export function buildTerrainGeometry(hf) {
       const i = r * width + c;
       positions[i * 3] = (c / (width - 1) - 0.5) * worldW;
       positions[i * 3 + 1] = Number.isFinite(data[i]) ? data[i] : stats.min;
-      positions[i * 3 + 2] = (0.5 - r / (height - 1)) * worldH;
+      positions[i * 3 + 2] = (r / (height - 1) - 0.5) * worldH;
     }
   }
 

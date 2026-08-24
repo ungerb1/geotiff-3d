@@ -7,6 +7,8 @@ import { buildTerrainGeometry, applyColormap, worldExtents } from './mesh.js';
 const el = (id) => document.getElementById(id);
 const canvas = el('scene');
 const infoEl = el('info');
+const compassEl = el('compass');
+const compassDial = el('compass-dial');
 const welcomeEl = el('welcome');
 const dropzoneEl = el('dropzone');
 const loadingEl = el('loading');
@@ -97,7 +99,7 @@ function fitCamera(hf) {
   const relief = (hf.stats.max - hf.stats.min) * exaggeration;
   const dist = Math.max(radius * 1.25, relief * 3);
 
-  const azimuth = (35 * Math.PI) / 180;
+  const azimuth = 0;
   const elevation = (38 * Math.PI) / 180;
   const horiz = dist * Math.cos(elevation);
   camera.position.set(
@@ -141,6 +143,7 @@ function applyHeightfield(hf) {
 
   infoEl.textContent = formatInfo(hf);
   infoEl.classList.remove('hidden');
+  compassEl.classList.remove('hidden');
   welcomeEl.classList.add('hidden');
 }
 
@@ -238,8 +241,22 @@ window.addEventListener('resize', resize);
 new ResizeObserver(resize).observe(canvas);
 resize();
 
+const NORTH = new THREE.Vector3(0, 0, -1);
+const _fwd = new THREE.Vector3();
+const _right = new THREE.Vector3();
+const _screenUp = new THREE.Vector3();
+
+function updateCompass() {
+  camera.getWorldDirection(_fwd);
+  _right.crossVectors(_fwd, camera.up).normalize();
+  _screenUp.crossVectors(_right, _fwd);
+  const angle = Math.atan2(_right.dot(NORTH), _screenUp.dot(NORTH));
+  compassDial.style.transform = `rotate(${angle}rad)`;
+}
+
 renderer.setAnimationLoop(() => {
   controls.update();
+  updateCompass();
   renderer.render(scene, camera);
 });
 
