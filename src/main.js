@@ -13,6 +13,7 @@ const loadingEl = el('loading');
 const errorEl = el('error');
 const fileInput = el('file-input');
 const openBtn = el('open-btn');
+const recenterBtn = el('recenter-btn');
 const cmapSelect = el('colormap');
 const resSelect = el('resolution');
 const exagSlider = el('exaggeration');
@@ -54,6 +55,9 @@ function setExaggeration(v, from) {
   if (from !== 'slider') exagSlider.value = String(Math.min(Math.max(v, 0.1), 30));
   if (from !== 'input') exagInput.value = String(v);
   if (terrain) terrain.scale.y = v;
+  if (terrain && heightfield) {
+    controls.target.y = ((heightfield.stats.min + heightfield.stats.max) / 2) * exaggeration;
+  }
   return true;
 }
 
@@ -165,6 +169,9 @@ async function loadFile(file) {
 }
 
 openBtn.addEventListener('click', () => fileInput.click());
+recenterBtn.addEventListener('click', () => {
+  if (heightfield) fitCamera(heightfield);
+});
 fileInput.addEventListener('change', () => {
   if (fileInput.files.length) loadFile(fileInput.files[0]);
   fileInput.value = '';

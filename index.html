@@ -82,6 +82,13 @@
         font: inherit;
         font-variant-numeric: tabular-nums;
         text-align: right;
+        -moz-appearance: textfield;
+        appearance: textfield;
+      }
+      input[type="number"]::-webkit-outer-spin-button,
+      input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
       }
       input[type="number"]:focus {
         outline: none;
@@ -97,10 +104,13 @@
         padding: 6px 14px;
         background: var(--panel);
         border: 1px solid var(--border);
-        border-radius: 999px;
+        border-radius: 12px;
         backdrop-filter: blur(10px);
         font-variant-numeric: tabular-nums;
-        white-space: nowrap;
+        white-space: normal;
+        max-width: min(92vw, 760px);
+        text-align: center;
+        line-height: 1.5;
       }
       #info b { color: var(--accent); font-weight: 600; }
 
@@ -160,6 +170,9 @@
       <h1>GeoTIFF · 3D</h1>
       <div class="row">
         <button id="open-btn">Open .tif file…</button>
+      </div>
+      <div class="row">
+        <button id="recenter-btn">Recenter view</button>
       </div>
       <div class="row">
         <label for="resolution">Resolution</label>
