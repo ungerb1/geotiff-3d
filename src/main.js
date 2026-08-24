@@ -228,13 +228,14 @@ cmapSelect.addEventListener('change', () => {
 });
 
 function resize() {
-  const w = window.innerWidth;
-  const h = window.innerHeight;
-  renderer.setSize(w, h, false);
+  const w = canvas.clientWidth || window.innerWidth;
+  const h = canvas.clientHeight || window.innerHeight;
+  renderer.setSize(w, h);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
 }
 window.addEventListener('resize', resize);
+new ResizeObserver(resize).observe(canvas);
 resize();
 
 renderer.setAnimationLoop(() => {
