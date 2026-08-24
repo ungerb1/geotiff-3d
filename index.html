@@ -64,6 +64,46 @@
         cursor: pointer;
       }
       select:hover, button:hover { background: rgba(255, 255, 255, 0.1); }
+      button.active {
+        background: rgba(53, 184, 164, 0.28);
+        border-color: var(--accent);
+        color: #d9fff7;
+      }
+
+      #fill-panel { padding-top: 2px; }
+      #cap-slider {
+        width: 100%;
+        margin-bottom: 6px;
+      }
+      #cap-slider { width: 100%; }
+      #cap-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--accent);
+        cursor: pointer;
+      }
+      #cap-slider::-moz-range-thumb {
+        width: 12px;
+        height: 12px;
+        border: none;
+        border-radius: 50%;
+        background: var(--accent);
+        cursor: pointer;
+      }
+      .cap-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 11px;
+        color: var(--text-dim);
+        margin-bottom: 6px;
+      }
+      .cap-row span:last-child {
+        color: var(--accent);
+        font-variant-numeric: tabular-nums;
+      }
       input[type="range"] { width: 100%; accent-color: var(--accent); }
       .slider-head {
         display: flex;
@@ -112,8 +152,6 @@
         text-align: center;
         line-height: 1.5;
       }
-      #info b { color: var(--accent); font-weight: 600; }
-
       #compass {
         position: fixed;
         top: 16px;
@@ -214,6 +252,17 @@
       </div>
       <div class="row">
         <button id="recenter-btn">Recenter view</button>
+      </div>
+      <div class="row">
+        <button id="fill-btn">Interpolate holes</button>
+      </div>
+      <div id="fill-panel" class="hidden">
+        <div class="cap-row">
+          <span>Max hole size</span>
+          <span id="cap-label"></span>
+        </div>
+        <input type="range" id="cap-slider" min="0" max="1000" value="459" />
+        <button id="apply-cap">Apply</button>
       </div>
       <div class="row">
         <label for="resolution">Resolution</label>

@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { buildLUT, COLORMAPS, DEFAULT_COLORMAP } from './colormaps.js';
 import { loadHeightfield } from './loader.js';
 import { buildTerrainGeometry, applyColormap, worldExtents } from './mesh.js';
+import { fillInteriorHoles } from './interp.js';
 
 const el = (id) => document.getElementById(id);
 const canvas = el('scene');
@@ -16,10 +17,15 @@ const errorEl = el('error');
 const fileInput = el('file-input');
 const openBtn = el('open-btn');
 const recenterBtn = el('recenter-btn');
+const fillBtn = el('fill-btn');
 const cmapSelect = el('colormap');
 const resSelect = el('resolution');
 const exagSlider = el('exaggeration');
 const exagInput = el('exag-input');
+const fillPanel = el('fill-panel');
+const capSlider = el('cap-slider');
+const capLabel = el('cap-label');
+const applyCapBtn = el('apply-cap');
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -45,6 +51,60 @@ let terrain = null;
 let heightfield = null;
 let sourceBuffer = null;
 let exaggeration = 10;
+let fillEnabled = false;
+let appliedCap = 1000;
+
+const CAP_MIN_LOG2 = 4;
+const CAP_MAX_LOG2 = 17;
+
+function pendingLog2() {
+  return CAP_MIN_LOG2 + (capSlider.value / 1000) * (CAP_MAX_LOG2 - CAP_MIN_LOG2);
+}
+
+function updateCapLabel() {
+  const f = capSlider.value / 1000;
+  if (f >= 1) {
+    capLabel.textContent = 'Unlimited';
+    return;
+  }
+  const cells = Math.round(2 ** pendingLog2());
+  const side = Math.max(1, Math.round(Math.sqrt(cells)));
+  capLabel.textContent = `~${side}\u00d7${side} \u00b7 ${cells.toLocaleString()} cells`;
+}
+
+function syncFillState() {
+  try {
+    setLoading(true);
+    if (fillEnabled) applyFill(heightfield);
+    else {
+      heightfield.data.set(heightfield.rawData);
+      rescanStats(heightfield);
+    }
+    applyHeightfield(heightfield);
+  } finally {
+    setLoading(false);
+  }
+}
+
+function rescanStats(hf) {
+  let min = Infinity;
+  let max = -Infinity;
+  for (let i = 0; i < hf.data.length; i++) {
+    const v = hf.data[i];
+    if (Number.isFinite(v)) {
+      if (v < min) min = v;
+      if (v > max) max = v;
+    }
+  }
+  if (Number.isFinite(min)) hf.stats.min = min;
+  if (Number.isFinite(max)) hf.stats.max = max;
+}
+
+function applyFill(hf) {
+  hf.data.set(hf.rawData);
+  fillInteriorHoles(hf.data, hf.width, hf.height, { maxHoleCells: appliedCap });
+  rescanStats(hf);
+}
 
 function currentMaxGrid() {
   const v = parseInt(resSelect.value, 10);
@@ -150,6 +210,8 @@ function applyHeightfield(hf) {
 async function visualize(arrayBuffer, { refit = true } = {}) {
   const hf = await loadHeightfield(arrayBuffer, { maxGrid: currentMaxGrid() });
   sourceBuffer = arrayBuffer;
+  hf.rawData = hf.data.slice();
+  if (fillEnabled) applyFill(hf);
   applyHeightfield(hf);
   if (refit) fitCamera(hf);
 }
@@ -175,6 +237,25 @@ openBtn.addEventListener('click', () => fileInput.click());
 recenterBtn.addEventListener('click', () => {
   if (heightfield) fitCamera(heightfield);
 });
+
+fillBtn.addEventListener('click', () => {
+  fillEnabled = !fillEnabled;
+  fillBtn.classList.toggle('active', fillEnabled);
+  fillPanel.classList.toggle('hidden', !fillEnabled);
+  if (!heightfield) return;
+  syncFillState();
+});
+
+capSlider.addEventListener('input', updateCapLabel);
+
+applyCapBtn.addEventListener('click', () => {
+  const f = capSlider.value / 1000;
+  appliedCap = f >= 1 ? Infinity : Math.max(1, Math.round(2 ** pendingLog2()));
+  if (!heightfield) return;
+  syncFillState();
+});
+
+updateCapLabel();
 fileInput.addEventListener('change', () => {
   if (fileInput.files.length) loadFile(fileInput.files[0]);
   fileInput.value = '';

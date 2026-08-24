@@ -7,8 +7,10 @@ Browser-based 3D terrain viewer for GeoTIFF elevation data. Drag and drop a `.ti
 - **Drag & drop loading** : drop any `.tif` / `.tiff` onto the page (or use the open button)
 - **Interactive camera** : orbit, zoom, and pan with damping; lighting-based hillshading
 - **Recenter view** : one-click reset of the camera to the default framing centered on the surface
+- **Compass** : HUD dial whose needle continuously tracks true north as you orbit
 - **Resolution selector** : resample the mesh from 256 up to native resolution; re-renders in place without re-loading the file
 - **Vertical exaggeration** : slider plus a type-in box for precise values beyond the slider range
+- **Interpolate holes** : sticky toggle that fills interior NoData holes (only those fully enclosed by soundings) with a smooth diffusion surface; an optional max-hole-size cap keeps large regions open
 - **Colormaps** : Ocean (default), Viridis, Inferno, Terrain, Grayscale
 - **NoData handling** : `NaN` and `GDAL_NODATA` values are masked out instead of rendering spikes
 - **Georeferencing-aware** : true-world aspect ratio from pixel scale; CRS (EPSG code), dimensions, resolution, and elevation range shown in the info bar
@@ -34,11 +36,14 @@ Open the printed URL (default `http://localhost:5173`) and drop a GeoTIFF onto t
 | Scroll | Zoom |
 | Right-drag | Pan |
 | Recenter view | Reset camera to default framing |
+| Interpolate holes | Toggle hole filling; set max hole size, then Apply |
 | Drop `.tif` | Load file |
 
 **Resolution** controls the mesh density (longest side of the heightfield grid, bilinear-resampled). Lower values render faster; Native uses every pixel, so expect millions of triangles on large rasters. If the file is smaller than the selected size, it clamps to native.
 
 **Vertical exaggeration** scales terrain height live. Typed values are not capped at the slider's maximum; empty or invalid input reverts to the last valid value. Changing it keeps the camera pinned on the surface center.
+
+**Interpolate holes** bridges interior gaps between soundings with a diffusion surface. Holes touching the raster border (e.g. land masks) are never filled. The max-hole-size cap is from ~4×4 cells up to Unlimited. This only takes effect when you press Apply, and the setting persists across loads and resolution changes while the toggle is active.
 
 Tip: append `?src=<path>` to the URL to auto-load a raster served alongside the app (e.g. from `public/`).
 
@@ -51,10 +56,11 @@ The first band is interpreted as elevation. Float32, integer, and most GDAL-read
 ```
 index.html            UI layout, panel, styles
 src/main.js           scene, camera, controls, UI wiring
-src/loader.js         GeoTIFF parsing, resampling, NoData masking
+src/loader.js         GeoTIFF parsing, box-average resampling, NoData masking
 src/mesh.js           heightfield -> BufferGeometry, colormap application
+src/interp.js         interior-hole classification and diffusion fill
 src/colormaps.js      colormap LUTs
-scripts/test-loader.mjs   node-side loader sanity check
+scripts/test-*.mjs    node-side sanity checks (loader, downsample, interp, orientation)
 ```
 
 ## Credits
